@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f1f5f9; color: #334155; }
@@ -41,6 +41,12 @@
         .modal-enter { opacity: 0; transform: scale(0.95); }
         .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 0.3s ease, transform 0.3s ease; }
         .modal-exit { opacity: 0; transform: scale(0.95); transition: opacity 0.2s ease, transform 0.2s ease; }
+
+        /* 價格跳動動畫 */
+        @keyframes flash-red { 0% { color: #ef4444; background-color: #fef2f2; } 100% { color: inherit; background-color: transparent; } } /* 漲 */
+        @keyframes flash-green { 0% { color: #10b981; background-color: #ecfdf5; } 100% { color: inherit; background-color: transparent; } } /* 跌 */
+        .price-up { animation: flash-red 1.5s ease-out; } 
+        .price-down { animation: flash-green 1.5s ease-out; }
     </style>
 </head>
 <body class="bg-slate-100">
@@ -54,7 +60,17 @@
                 </div>
                 <span class="text-xl font-bold tracking-wide">MyStock<span class="text-indigo-400">Docs</span></span>
             </div>
-            <div class="text-sm text-slate-400">報價延遲</div>
+            
+            <!-- 新增：右側更新按鈕 -->
+            <div class="flex items-center gap-4">
+                <div class="text-xs text-slate-400 hidden md:block">
+                    更新時間: <span id="lastUpdateTime">--:--:--</span>
+                </div>
+                <button onclick="fetchStockPrices()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1 rounded text-sm transition-colors flex items-center gap-1 border border-slate-700">
+                    <svg id="refreshIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    刷新報價
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -120,8 +136,8 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // --- 設定區：在這裡替換成自己的 Google Doc 連結 ---
-        // 注意：必須使用 Google Doc -> 檔案 -> 共用 -> 發布到網路 (Publish to Web) 所產生的連結
+        // 您的 Google Sheet CSV 連結 (已自動修正為 csv 格式)
+        const googleSheetCSVUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlImpR8uIl0XO8MrB27aIaQpRVq3PT4HMT1tKbzp1__RY-pCKLLNO9QhGdryumCCpHSEWMHluj5B6H/pub?output=csv';
         
         const stocks = [
             {
@@ -133,7 +149,6 @@
                 rating: '區間操作',
                 ratingClass: 'bg-amber-100 text-amber-800',
                 desc: '充電樁與低軌衛星雙引擎，主要關注營收年增率是否回升。',
-                // 範例連結
                 docUrl: 'https://docs.google.com/document/d/1pJ5fYmvM5JUVbiIvCkLy685OwQfSExsxLPmfHu-vYt4/edit?usp=sharing' 
             },
             {
@@ -191,7 +206,7 @@
                 desc: '面板級扇出型封裝 (FOPLP) 題材，目前仍受面板景氣循環影響。',
                 docUrl: 'https://docs.google.com/document/d/1RhLOLMrpVII_APQt2hRB4kT3ZqB6ctUUPa8Wbohf4GU/edit?usp=sharing' 
              },
-           {
+            {
                 id: '6442',
                 name: '光聖',
                 code: '6442',
@@ -201,8 +216,8 @@
                 ratingClass: 'bg-emerald-100 text-emerald-800',
                 desc: 'AI 超算中心的關鍵神經網絡。',
                 docUrl: 'https://docs.google.com/document/d/1A1elH7mU9_5888TAgtSunxICmikiVKmwxRGmeeXBYUs/edit?usp=sharing' 
-           },
-        {
+            },
+            {
                 id: '',
                 name: 'AI智慧產業地圖',
                 code: '',
@@ -227,24 +242,36 @@
                 
                 const card = document.createElement('div');
                 card.className = 'bg-white rounded-xl p-6 shadow-sm border border-slate-200 stock-card flex flex-col justify-between h-full group cursor-pointer';
-                card.onclick = () => openModal(stock.id); // 點擊卡片開啟 Modal
+                card.onclick = (e) => {
+                    // 避免點到連結時觸發 Modal
+                    if(e.target.tagName !== 'A' && stock.id !== '') openModal(stock.id);
+                    if(stock.id === '' && stock.docUrl) window.open(stock.docUrl, '_blank'); // 產業地圖直接開新分頁
+                };
+
+                // 處理價格顯示 (如果有 Code 才顯示價格區塊)
+                const priceBlock = stock.code ? `
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-400 uppercase">Current Price</span>
+                        <span id="price-${stock.code}" class="font-mono text-xl font-bold text-slate-800 transition-colors duration-500">${stock.price}</span>
+                    </div>
+                ` : '<div></div>'; // 佔位符
 
                 card.innerHTML = `
                     <div>
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <span class="text-xs font-mono text-slate-400">TW:${stock.code}</span>
+                                <span class="text-xs font-mono text-slate-400">${stock.code ? 'TW:' + stock.code : 'TOOL'}</span>
                                 <h3 class="text-xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">${stock.name}</h3>
                             </div>
-                            <span class="${stock.ratingClass} px-2 py-1 rounded text-xs font-bold">${stock.rating}</span>
+                            ${stock.rating ? `<span class="${stock.ratingClass} px-2 py-1 rounded text-xs font-bold">${stock.rating}</span>` : ''}
                         </div>
                         <p class="text-slate-600 text-sm mb-4 leading-relaxed">${stock.desc}</p>
                     </div>
                     
                     <div class="pt-4 border-t border-slate-100 flex justify-between items-center mt-auto">
-                        <span class="font-mono font-medium text-slate-700">$${stock.price}</span>
+                        ${priceBlock}
                         <div class="flex items-center gap-1 text-xs font-medium ${hasDoc ? 'text-indigo-600' : 'text-slate-400'}">
-                            ${hasDoc ? '📄 閱讀報告' : '⚠️ 暫無報告'}
+                            ${hasDoc ? '📄 查看詳情' : '⚠️ 暫無報告'}
                             ${hasDoc ? '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>' : ''}
                         </div>
                     </div>
@@ -262,6 +289,66 @@
             btn.classList.remove('bg-white', 'text-slate-600');
             btn.classList.add('bg-slate-800', 'text-white');
             renderStocks(category);
+            fetchStockPrices(); // 篩選後重新更新價格綁定
+        }
+
+        // --- 即時報價功能 (Fetch CSV) ---
+        async function fetchStockPrices() {
+            if (!googleSheetCSVUrl) return;
+
+            const icon = document.getElementById('refreshIcon');
+            icon.classList.add('animate-spin');
+
+            try {
+                const response = await fetch(googleSheetCSVUrl);
+                const csvText = await response.text();
+                
+                // 簡單解析 CSV (格式假設: StockCode, Price)
+                const rows = csvText.split('\n').map(row => row.split(','));
+                
+                rows.forEach(row => {
+                    if (row.length < 2) return;
+                    // 清理資料
+                    const code = row[0].replace(/['"]/g, '').trim(); // 股票代號
+                    const priceRaw = row[1].replace(/['"]/g, '').trim(); // 價格
+                    const price = parseFloat(priceRaw);
+
+                    if (code && !isNaN(price)) {
+                        updatePriceDOM(code, price);
+                    }
+                });
+
+                // 更新時間
+                const now = new Date();
+                document.getElementById('lastUpdateTime').innerText = now.toLocaleTimeString();
+
+            } catch (error) {
+                console.error("無法抓取股價:", error);
+            } finally {
+                setTimeout(() => icon.classList.remove('animate-spin'), 500);
+            }
+        }
+
+        function updatePriceDOM(code, newPrice) {
+            const el = document.getElementById(`price-${code}`);
+            if (!el) return;
+
+            const oldPrice = parseFloat(el.innerText);
+            
+            // 如果價格沒變，就不做任何事
+            if (oldPrice === newPrice) return;
+
+            el.innerText = newPrice; // 這裡不強制 toFixed(1)，保留 Google Sheet 的格式
+
+            // 簡單的動畫
+            el.classList.remove('price-up', 'price-down');
+            void el.offsetWidth; // Trigger reflow
+            
+            if (newPrice > oldPrice) {
+                el.classList.add('price-up'); // 紅色 (台股慣例)
+            } else if (newPrice < oldPrice) {
+                el.classList.add('price-down'); // 綠色
+            }
         }
 
         // --- Modal Logic ---
@@ -276,8 +363,9 @@
             const stock = stocks.find(s => s.id === id);
             if (!stock) return;
 
-            // 如果沒有連結，給一個預設提示畫面或 Google 空白頁
-            const targetUrl = stock.docUrl || 'https://docs.google.com/document/d/1bd1c530z0Xqgq6l9yO4k-Qv0x4jX6_vQ/preview'; // 這裡放一個預設的 "無資料" 頁面連結比較好，暫時用空白
+            // 注意：edit 連結通常無法嵌入，建議換成 publish 連結
+            // 這裡直接使用 docUrl
+            const targetUrl = stock.docUrl || 'about:blank';
 
             modalTitle.innerText = `${stock.name} - 詳細研究報告`;
             modalCode.innerText = `Stock Code: ${stock.code}`;
@@ -289,13 +377,11 @@
             // 設定 Iframe
             docFrame.src = targetUrl;
             
-            // Iframe 載入完成後隱藏 Loading
             docFrame.onload = () => {
                 loadingSpinner.style.display = 'none';
             };
 
             modal.classList.remove('hidden');
-            // 小延遲讓動畫生效
             setTimeout(() => {
                 modal.querySelector('div.modal-enter').classList.add('modal-enter-active');
             }, 10);
@@ -309,12 +395,16 @@
             setTimeout(() => {
                 modal.classList.add('hidden');
                 content.classList.remove('modal-exit');
-                docFrame.src = ''; // 清空 iframe 以停止加載
+                docFrame.src = ''; 
             }, 200);
         }
 
         // Init
         renderStocks('all');
+        
+        // 自動更新 (頁面載入時 + 1秒)
+        window.onload = fetchStockPrices;
+        setInterval(fetchStockPrices, 1000);
 
     </script>
 </body>

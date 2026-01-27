@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ready投資研究資料庫 | Stock Research Portal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f1f5f9; color: #334155; }
+        
+        /* 隱藏 Scrollbar 但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 卡片特效 */
+        .stock-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .stock-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); }
+
+        /* Google Doc Iframe 容器 */
+        .doc-container {
+            position: relative;
+            width: 100%;
+            height: 70vh; /* 佔據螢幕高度的 70% */
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .doc-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Modal 動畫 */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 0.3s ease, transform 0.3s ease; }
+        .modal-exit { opacity: 0; transform: scale(0.95); transition: opacity 0.2s ease, transform 0.2s ease; }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-500 p-2 rounded-lg">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                </div>
+                <span class="text-xl font-bold tracking-wide">MyStock<span class="text-indigo-400">Docs</span></span>
+            </div>
+            <div class="text-sm text-slate-400">連結至 Google Docs</div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- Header -->
+        <div class="mb-8 text-center md:text-left">
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">個股研究報告中心</h1>
+            <p class="text-slate-500">點擊卡片查看詳細 Google 文件筆記與分析</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex flex-wrap gap-2 mb-8">
+            <button class="filter-btn active bg-slate-800 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors" onclick="filterStocks('all', this)">全部</button>
+            <button class="filter-btn bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 px-4 py-2 rounded-full text-sm font-medium transition-colors" onclick="filterStocks('semiconductor', this)">半導體/IC</button>
+            <button class="filter-btn bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 px-4 py-2 rounded-full text-sm font-medium transition-colors" onclick="filterStocks('pcb', this)">PCB/網通</button>
+            <button class="filter-btn bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 px-4 py-2 rounded-full text-sm font-medium transition-colors" onclick="filterStocks('component', this)">零組件/面板</button>
+        </div>
+
+        <!-- Grid -->
+        <div id="stockGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- JavaScript will inject cards here -->
+        </div>
+
+    </main>
+
+    <!-- Modal (Popup for Google Doc) -->
+    <div id="docModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col relative z-10 modal-enter transition-all transform">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white rounded-t-2xl">
+                <div>
+                    <h2 id="modalTitle" class="text-xl font-bold text-slate-800">報告標題</h2>
+                    <span id="modalCode" class="text-sm text-slate-500 font-mono">CODE</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a id="externalLink" href="#" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1">
+                        開啟原始文件
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body (Iframe) -->
+            <div class="flex-1 bg-slate-50 p-4 overflow-hidden relative">
+                <div id="loadingSpinner" class="absolute inset-0 flex items-center justify-center z-20 bg-slate-50">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                </div>
+                <div class="doc-container shadow-inner border border-slate-200 h-full w-full">
+                    <iframe id="docFrame" src="" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 設定區：在這裡替換成自己的 Google Doc 連結 ---
+        // 注意：必須使用 Google Doc -> 檔案 -> 共用 -> 發布到網路 (Publish to Web) 所產生的連結
+        
+        const stocks = [
+            {
+                id: '6285',
+                name: '啟碁',
+                code: '6285',
+                category: 'pcb',
+                price: '148.0',
+                rating: '區間操作',
+                ratingClass: 'bg-amber-100 text-amber-800',
+                desc: '充電樁與低軌衛星雙引擎，主要關注營收年增率是否回升。',
+                // 範例連結
+                docUrl: 'https://docs.google.com/document/d/1pJ5fYmvM5JUVbiIvCkLy685OwQfSExsxLPmfHu-vYt4/edit?usp=sharing' 
+            },
+            {
+                id: '2454',
+                name: '聯發科',
+                code: '2454',
+                category: 'semiconductor',
+                price: '980.0',
+                rating: '長期持有',
+                ratingClass: 'bg-emerald-100 text-emerald-800',
+                desc: '天璣 9400 旗艦晶片展望樂觀，邊緣 AI 手機需求帶動。',
+                docUrl: '' 
+            },
+            {
+                id: '2367',
+                name: '燿華',
+                code: '2367',
+                category: 'pcb',
+                price: '26.5',
+                rating: '觀察中',
+                ratingClass: 'bg-slate-100 text-slate-800',
+                desc: '低軌衛星板比重提升，車用 HDI 板回溫，留意轉機題材。',
+                docUrl: 'https://docs.google.com/document/d/1sK000NqT0Kizi1efWy1PaiIf-mOnnWZviH9e0kqAM10/edit?usp=sharing' 
+            },
+            {
+                id: '3260',
+                name: '威剛',
+                code: '3260',
+                category: 'semiconductor',
+                price: '105.0',
+                rating: '波段操作',
+                ratingClass: 'bg-indigo-100 text-indigo-800',
+                desc: '記憶體報價循環向上，低價庫存利益將在財報顯現。',
+                docUrl: 'https://docs.google.com/document/d/1rO9Z7TTVq_zYwK18CXzG4ZFexLx0BQc0riHpqt3hSJ8/edit?usp=sharing' 
+            },
+            {
+                id: '2449',
+                name: '京元電子',
+                code: '2449',
+                category: 'semiconductor',
+                price: '300',
+                rating: '強力買進',
+                ratingClass: 'bg-emerald-100 text-emerald-800',
+                desc: 'AI 晶片測試。',
+                docUrl: 'https://docs.google.com/document/d/1bDZhuxbzWR3cvTvPW10B6jfE879cbmp0BWgBqQY5Hls/edit?tab=t.0' 
+            },
+             {
+                id: '3481',
+                name: '群創',
+                code: '3481',
+                category: 'component',
+                price: '23.05',
+                rating: '中立',
+                ratingClass: 'bg-slate-100 text-slate-600',
+                desc: '面板級扇出型封裝 (FOPLP) 題材，目前仍受面板景氣循環影響。',
+                docUrl: 'https://docs.google.com/document/d/1RhLOLMrpVII_APQt2hRB4kT3ZqB6ctUUPa8Wbohf4GU/edit?usp=sharing' 
+             },
+           {
+                id: '6442',
+                name: '光聖',
+                code: '6442',
+                category: 'semiconductor',
+                price: '1430',
+                rating: '強力買進',
+                ratingClass: 'bg-emerald-100 text-emerald-800',
+                desc: 'AI 超算中心的關鍵神經網絡。',
+                docUrl: 'https://docs.google.com/document/d/1A1elH7mU9_5888TAgtSunxICmikiVKmwxRGmeeXBYUs/edit?usp=sharing' 
+            }
+        ];
+
+        // --- 渲染功能 ---
+        const grid = document.getElementById('stockGrid');
+
+        function renderStocks(filter) {
+            grid.innerHTML = '';
+            const filtered = filter === 'all' ? stocks : stocks.filter(s => s.category === filter);
+
+            filtered.forEach(stock => {
+                const hasDoc = stock.docUrl && stock.docUrl.length > 10;
+                
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl p-6 shadow-sm border border-slate-200 stock-card flex flex-col justify-between h-full group cursor-pointer';
+                card.onclick = () => openModal(stock.id); // 點擊卡片開啟 Modal
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <span class="text-xs font-mono text-slate-400">TW:${stock.code}</span>
+                                <h3 class="text-xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">${stock.name}</h3>
+                            </div>
+                            <span class="${stock.ratingClass} px-2 py-1 rounded text-xs font-bold">${stock.rating}</span>
+                        </div>
+                        <p class="text-slate-600 text-sm mb-4 leading-relaxed">${stock.desc}</p>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-slate-100 flex justify-between items-center mt-auto">
+                        <span class="font-mono font-medium text-slate-700">$${stock.price}</span>
+                        <div class="flex items-center gap-1 text-xs font-medium ${hasDoc ? 'text-indigo-600' : 'text-slate-400'}">
+                            ${hasDoc ? '📄 閱讀報告' : '⚠️ 暫無報告'}
+                            ${hasDoc ? '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>' : ''}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // --- Filter Logic ---
+        function filterStocks(category, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('bg-slate-800', 'text-white');
+                b.classList.add('bg-white', 'text-slate-600');
+            });
+            btn.classList.remove('bg-white', 'text-slate-600');
+            btn.classList.add('bg-slate-800', 'text-white');
+            renderStocks(category);
+        }
+
+        // --- Modal Logic ---
+        const modal = document.getElementById('docModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalCode = document.getElementById('modalCode');
+        const docFrame = document.getElementById('docFrame');
+        const externalLink = document.getElementById('externalLink');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        function openModal(id) {
+            const stock = stocks.find(s => s.id === id);
+            if (!stock) return;
+
+            // 如果沒有連結，給一個預設提示畫面或 Google 空白頁
+            const targetUrl = stock.docUrl || 'https://docs.google.com/document/d/1bd1c530z0Xqgq6l9yO4k-Qv0x4jX6_vQ/preview'; // 這裡放一個預設的 "無資料" 頁面連結比較好，暫時用空白
+
+            modalTitle.innerText = `${stock.name} - 詳細研究報告`;
+            modalCode.innerText = `Stock Code: ${stock.code}`;
+            externalLink.href = targetUrl;
+            
+            // 顯示 Loading
+            loadingSpinner.style.display = 'flex';
+            
+            // 設定 Iframe
+            docFrame.src = targetUrl;
+            
+            // Iframe 載入完成後隱藏 Loading
+            docFrame.onload = () => {
+                loadingSpinner.style.display = 'none';
+            };
+
+            modal.classList.remove('hidden');
+            // 小延遲讓動畫生效
+            setTimeout(() => {
+                modal.querySelector('div.modal-enter').classList.add('modal-enter-active');
+            }, 10);
+        }
+
+        function closeModal() {
+            const content = modal.querySelector('div.modal-enter');
+            content.classList.remove('modal-enter-active');
+            content.classList.add('modal-exit');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                content.classList.remove('modal-exit');
+                docFrame.src = ''; // 清空 iframe 以停止加載
+            }, 200);
+        }
+
+        // Init
+        renderStocks('all');
+
+    </script>
+</body>
+</html>

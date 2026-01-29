@@ -80,7 +80,7 @@
         <!-- Header -->
         <div class="mb-8 text-center md:text-left">
             <h1 class="text-3xl font-bold text-slate-800 mb-2">個股研究報告中心</h1>
-            <p class="text-slate-500">點擊卡片查看詳細 Google 文件筆記與分析</p>
+            <p class="text-slate-500">點擊字卡查看詳細研究報告</p>
         </div>
 
         <!-- Filters -->
@@ -457,9 +457,9 @@
         // Init
         renderStocks('all');
         
-        // 自動更新 (頁面載入時 + 1秒)
+        // 自動更新 (頁面載入時 + 0.5秒)
         window.onload = fetchStockPrices;
-        setInterval(fetchStockPrices, 1000);
+        setInterval(fetchStockPrices, 500);
 
     </script>
 </body>

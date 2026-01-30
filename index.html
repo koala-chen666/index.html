@@ -468,9 +468,9 @@
         // Init
         renderStocks('all');
         
-        // 自動更新 (頁面載入時 + 0.5秒)
+        // 自動更新 (頁面載入時 + 1秒)
         window.onload = fetchStockPrices;
-        setInterval(fetchStockPrices, 500);
+        setInterval(fetchStockPrices, 1000);
 
     </script>
 </body>

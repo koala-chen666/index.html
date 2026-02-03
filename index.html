@@ -136,7 +136,7 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // Google Sheet CSV 連結 (已自動修正為 csv 格式)
+        // 您的 Google Sheet CSV 連結 (已自動修正為 csv 格式)
         const googleSheetCSVUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlImpR8uIl0XO8MrB27aIaQpRVq3PT4HMT1tKbzp1__RY-pCKLLNO9QhGdryumCCpHSEWMHluj5B6H/pub?output=csv';
         
         const stocks = [
@@ -146,9 +146,9 @@
                 code: '2303',
                 category: 'IC代工',
                 price: '0',
-                rating: '買進',
+                rating: '強力買進',
                 ratingClass: 'bg-amber-100 text-amber-800',
-                desc: '近日0127至0130美商高盛與部分主力（凱基台北等）藉著聯電十二月財報不如預期加上2026Fed若降息將導致聯電獲利降低的利空出貨導致散戶恐慌下跌，大小摩把這些籌碼吸走。<br>大小摩近60日買超合計333985張，均價分別為55.24＆55.99元，且0130跌停鎖不死＋大小摩買超>>>推測20均有撐，推估長期看好至100元。<br>重點關注大小摩籌碼即可',
+                desc: '近日0127至0130美商高盛與部分主力（凱基台北等）藉著聯電十二月財報不如預期的短利空出貨導致散戶恐慌下跌，大小摩把這些籌碼吸走。<br>大小摩近60日買超合計333985張，均價分別為55.24＆55.99元，且0130跌停鎖不死＋大小摩買超>>>推測20均有撐，推估長期看好至100元。',
                 docUrl: 'https://docs.google.com/document/d/1gqvVGWReO-4Zj1eJWROWqOOU3FjTkFGKp2P_8UcCNE0/edit?usp=drivesdk' 
             },
             {
@@ -271,6 +271,17 @@
                 ratingClass: 'bg-amber-100 text-amber-800',
                 desc: '2026 年起 AI 手機與 AI PC 對於測試時間與測試複雜度的倍數級需求增長。隨著聯發科天璣 9400/9500 系列旗艦晶片的熱銷 ，以及北美與以色列 ASIC 新客戶的訂單放量 ，矽格正處於營收規模與獲利能力雙重擴張的甜蜜點。',
                 docUrl: 'https://docs.google.com/document/d/12C_BTZ4qCV1bnHtKtidL3K9_10dPCYR5cUSiGAwke2E/edit?usp=drivesdk' 
+            },
+            {
+                id: '',
+                name: '有關記憶體的一篇新聞',
+                code: '',
+                category: 'AI產業地圖',
+                price: '',
+                rating: '',
+                ratingClass: 'bg-emerald-100 text-emerald-800',
+                desc: '① 上週 DRAM 現貨價格走勢疲軟，標誌著自 2025 年 9 月以來的首度回檔 。<br>② 美銀（Bank of America）指出，目前難以將此現象定義為「產業反轉」或「硬著陸」的早期訊號，但預計平均售價（ASP）將從第二季至下半年趨於穩定，且 2027 年可能出現幅度小於 10% 的修正。<br>③ 另一家機構（TrendForce）則指出，第一季全球記憶體供需失衡狀況惡化，導致 DRAM 與 NAND 產品的第一季季增率預測遭到全面上調 。',
+                docUrl: 'https://news.futunn.com/en/post/68276382/is-the-wave-of-storage-price-increases-slowing-down-dram?level=2&data_ticket=1770086195326525' 
             },
             {
                 id: '',
@@ -479,9 +490,9 @@
         // Init
         renderStocks('all');
         
-        // 自動更新 (頁面載入時 + 0.5秒)
+        // 自動更新 (頁面載入時 + 1秒)
         window.onload = fetchStockPrices;
-        setInterval(fetchStockPrices, 500); 
+        setInterval(fetchStockPrices, 1000);
 
     </script>
 </body>
